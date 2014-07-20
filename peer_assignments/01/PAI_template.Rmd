@@ -1,0 +1,135 @@
+<link rel="stylesheet" type="text/css", href="styles/styles.css"/>
+
+# Reproducible Research: Peer Assessment 1
+<hr/>
+
+## Loading and preprocessing the data
+
+- **Load the data (and packages)**
+```{r load-data, message = F}
+library(xtable)
+library(lattice)
+library(dplyr)
+
+data <- read.csv("data/activity.csv", header = T)
+```
+
+- **Transform and display data**
+```{r display-data, results = 'asis'}
+head.data = xtable(head(data))
+tail.data = xtable(tail(data))
+
+print.xtable(head.data, type = 'html', include.rownames = F)
+print.xtable(tail.data, type = 'html', include.rownames = F)
+```
+
+
+## What is mean total number of steps taken per day?
+
+- **Make a histogram of the total number of steps taken each day**
+
+--**Getting total of steps by day**
+```{r}
+total.steps <- aggregate(data$steps, by=list(as.Date(data$date)), FUN=sum)
+names(total.steps) <- c("Date", "Total")
+total.steps$Date <- as.character(total.steps$Date)
+```
+
+--**Plotting data**
+```{r results='asis', fig.width = 12, fig.height = 6}
+histogram( ~ Total, data = total.steps, xlab = "Steps", main = NA,
+			panel = function(x, ...) {
+				panel.histogram(x, col = "#66CC99", border = "#008080", lwd = 2, ...)
+			}
+		)
+```
+
+- **Calculate and report the _mean_ and _median_ total number of steps taken per day**
+
+-- **Getting the Mean**
+```{r}
+mean.steps <- aggregate(data$steps, by=list(as.Date(data$date)), FUN=mean)
+```
+
+-- **Adding Median**
+```{r}
+mean.steps$Median <- aggregate(data$steps, by=list(as.Date(data$date)), FUN=median)[,2]
+names(mean.steps) <- c("Date", "Mean", "Median")
+mean.steps$Date <- as.character(mean.steps$Date)
+```
+
+-- **Printing table**
+```{r results='asis'}
+print.xtable(xtable(mean.steps), type='html', include.rownames = F,
+			 html.table.attributes="id='mean-median'")
+```
+
+## What is the average daily activity pattern?
+
+- **Make a time series plot (i.e. `type = "l"`) of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)**
+
+-- **Getting averaged steps**
+```{r}
+interval.data <- aggregate(data$steps, by=list(data$interval), FUN=mean, na.rm=T)
+names(interval.data) <- c("Interval", "Steps")
+```
+
+-- **Ploting time serie**
+```{r fig.height=6, fig.width=12}
+xyplot(Steps ~ Interval, data = interval.data, type = 'l',
+			panel = function(x, ...) {
+				panel.xyplot(x, col = "#008080", lwd = 2, ...)
+			}
+		)
+```
+
+- **Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?**
+
+-- **Getting row ubication of maximum number of steps**
+```{r}
+max.steps <- interval.data[which.max(interval.data$Steps),]
+```
+
+-- **Answer**: 5-minute interval containig the maximum number (`r round(max.steps$Steps, 1)`) of steps is `r max.steps$Interval`.
+
+
+## Imputing missing values
+
+- **Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with `NAs`)**
+
+-- **Getting rows with only `NAs` from main data set**
+```{r}
+na.data <- subset(data, is.na(steps))
+```
+
+-- **Count of missing values**: `r length(na.data$steps)`.
+
+- **Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. 
+For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.**
+
+- **Create a new dataset that is equal to the original dataset but with the missing data filled in.**
+
+-- **Filling `Na's` values with the mean for that corresponding day.**
+
+my.df <- do.call(rbind, )
+
+```{r}
+new.data <- data
+for(i in new.data$date){
+	rows <- filter(new.data, date == i & is.na(steps))
+	rows.mean <- filter(mean.steps, Date == i)
+	rows$steps <- rep(rows.mean$Mean, nrow(rows))
+	
+	day <- paste(strsplit(i,"-")[[1]][c(2, 3)], collapse = "")
+	assign(paste("day", day, sep = ""), rows)
+}
+
+list.d <- lapply(c(ls(pattern="day1")), FUN = as.name)
+data.na <- do.call(rbind, as.matrix(list.d))
+
+all.data <- rbind(subset(data, !is.na(steps)), data.na)
+```
+
+- **Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of 
+steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of 
+imputing missing data on the estimates of the total daily number of steps?**
